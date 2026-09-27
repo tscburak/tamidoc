@@ -47,4 +47,3 @@ The default app URL is `http://localhost:8080`. Docker volumes persist MongoDB a
 ## License and contributions
 
 The source code is distributed under [Apache-2.0](LICENSE). Third-party fonts and other assets retain their own licenses. See [CONTRIBUTING.md](CONTRIBUTING.md) to contribute. Code accepted into Community may also be included in Enterprise, which uses the same open core.
-# tamidoc
