@@ -1,0 +1,215 @@
+/* Inter via Google Fonts. Must precede @import "tailwindcss" (CSS @import rule ordering). */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+/* Same bundled fallback faces as PDF export, independent of installed fonts. */
+@font-face {
+  font-family: "DejaVu Sans";
+  src: url("/fonts/DejaVuSans.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DejaVu Sans";
+  src: url("/fonts/DejaVuSans-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DejaVu Sans";
+  src: url("/fonts/DejaVuSans-Oblique.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DejaVu Sans";
+  src: url("/fonts/DejaVuSans-BoldOblique.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DejaVu Sans Mono";
+  src: url("/fonts/DejaVuSansMono.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DejaVu Sans Mono";
+  src: url("/fonts/DejaVuSansMono-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DejaVu Sans Mono";
+  src: url("/fonts/DejaVuSansMono-Oblique.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DejaVu Sans Mono";
+  src: url("/fonts/DejaVuSansMono-BoldOblique.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Same DejaVu 2.37 faces as the PDF exporter; used for editable mPDF imports. */
+@font-face {
+  font-family: "DejaVu Serif Condensed";
+  src: url("/fonts/DejaVuSerifCondensed.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DejaVu Serif Condensed";
+  src: url("/fonts/DejaVuSerifCondensed-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DejaVu Serif Condensed";
+  src: url("/fonts/DejaVuSerifCondensed-Italic.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DejaVu Serif Condensed";
+  src: url("/fonts/DejaVuSerifCondensed-BoldItalic.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Class-based dark mode: toggling `.dark` on <html> enables `dark:` variants. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+ * Brand palette (single source of truth).
+ *
+ * Each color is a 10-shade scale. The core brand shade sits at index 600, so
+ * filled surfaces use the exact brand hex. Overriding Tailwind's built-in
+ * orange/amber/teal means `bg-orange-600` == the brand color — never hardcode
+ * hex values in components.
+ *
+ *   Primary   Burnt Orange  #C65D2E  -> orange-600
+ *   Secondary Amber         #E9A319  -> amber-600
+ *   Accent   Deep Teal      #2F6B5F  -> teal-600
+ *   Neutrals Stone scale (Tailwind built-in) -> stone-*
+ * ------------------------------------------------------------------------- */
+@theme {
+  --color-orange-50: #f8f0ed;
+  --color-orange-100: #eed8cf;
+  --color-orange-200: #e5c0af;
+  --color-orange-300: #dda78f;
+  --color-orange-400: #d78e6e;
+  --color-orange-500: #d1744b;
+  --color-orange-600: #c65d2e;
+  --color-orange-700: #944725;
+  --color-orange-800: #63331b;
+  --color-orange-900: #331a0f;
+
+  --color-amber-50: #faf5eb;
+  --color-amber-100: #f3e6cb;
+  --color-amber-200: #eed8ab;
+  --color-amber-300: #ebca88;
+  --color-amber-400: #e9bc65;
+  --color-amber-500: #e8af40;
+  --color-amber-600: #e9a319;
+  --color-amber-700: #ae7a14;
+  --color-amber-800: #735110;
+  --color-amber-900: #392909;
+
+  --color-teal-50: #eff6f4;
+  --color-teal-100: #cbe3de;
+  --color-teal-200: #a6d1c8;
+  --color-teal-300: #80c0b3;
+  --color-teal-400: #59b09e;
+  --color-teal-500: #428f80;
+  --color-teal-600: #2f6b5f;
+  --color-teal-700: #27564c;
+  --color-teal-800: #1f413a;
+  --color-teal-900: #162d28;
+
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ---------------------------------------------------------------------------
+ * Reusable surface utilities. Composition layer over Tailwind utilities so
+ * pages stop repeating long class strings and stay consistent.
+ * ------------------------------------------------------------------------- */
+@layer components {
+  /* Centered max-width content column with horizontal padding. */
+  .td-container {
+    @apply mx-auto w-full max-w-screen-lg px-4;
+  }
+
+  /* Vertical rhythm for page sections. */
+  .td-section {
+    @apply py-14 md:py-20;
+  }
+
+  /* Brand gradient clipped to text — for headline accents. */
+  .td-text-gradient {
+    background-image: linear-gradient(
+      90deg,
+      var(--color-orange-600),
+      var(--color-amber-500)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Subtle dot grid backdrop for hero/CTA bands. Tinted via currentColor. */
+  .td-bg-dots {
+    background-image: radial-gradient(
+      currentColor 1px,
+      transparent 1px
+    );
+    background-size: 22px 22px;
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: var(--font-sans);
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+}
+
+/* Card lift on hover (used across landing page cards). */
+.td-card {
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+.td-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--color-stone-300);
+}
+.dark .td-card:hover {
+  border-color: var(--color-stone-600);
+}
