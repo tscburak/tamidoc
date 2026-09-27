@@ -1,6 +1,6 @@
-# Tamidoc Community
+# Tamidoc
 
-Tamidoc Community is the open-source, self-hosted core for creating PDF documents from templates and forms. It is licensed under Apache-2.0. Enterprise modules are not included in this repository.
+Tamidoc is the open-source, self-hosted core for creating PDF documents from templates and forms. It is licensed under Apache-2.0. Enterprise modules are not included in this repository.
 
 ## Features
 
