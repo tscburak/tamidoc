@@ -1,0 +1,155 @@
+# Tamidoc — full stack behind a single nginx reverse proxy.
+#
+# Only the `proxy` service publishes a host port. The web app, API,
+# MongoDB and RustFS services live on the internal compose network, so every
+# browser request flows through the proxy. Routing the SPA and the API
+# through one origin means the web app's httpOnly auth cookies are
+# same-origin — no CORS, no SameSite complications.
+#
+# Runtime config comes from a single .env file at the project root.
+# Create it once:
+#
+#   cp .env.example .env
+#   # edit .env — set JWT_SECRET and unique S3 credentials
+#   docker compose up -d --build
+#
+# The bundled database and object store use persistent Docker volumes.
+#
+services:
+  proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "${PUBLIC_PORT:-8080}:80"
+    volumes:
+      - ./proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - web
+      - api
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        # Relative URL → browser requests hit the proxy origin and are
+        # routed to the API by the proxy's /api rule.
+        VITE_API_URL: /api/v1
+        VITE_TAMIDOC_EDITION: ${TAMIDOC_EDITION:-community}
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./apps/api
+    # Defaults connect to the bundled MongoDB and RustFS services.
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-3000}
+      API_PREFIX: ${API_PREFIX:-api}
+      TAMIDOC_EDITION: ${TAMIDOC_EDITION:-community}
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/tamidoc}
+      # Canonical origin the browser sees (CORS allow-list + OAuth
+      # redirects). Override with FRONTEND_URL in the root .env.
+      FRONTEND_URL: ${APP_URL:-http://localhost:8080}
+      API_URL: ${APP_URL:-http://localhost:8080}
+      # JWT
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      # Google OAuth
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      # Microsoft OAuth
+      MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID}
+      MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET}
+      # GitHub OAuth
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      # SMTP
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      EMAIL_FROM: ${EMAIL_FROM}
+      # S3-compatible object storage
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://rustfs:9000}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-tamidoc}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL}
+      # Optional AI field detection for PDF imports
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY}
+      TYPESAFE_MODEL: ${TYPESAFE_MODEL:-jev-1.13.0}
+      PDF_IMPORT_FIELD_CONFIDENCE: ${PDF_IMPORT_FIELD_CONFIDENCE:-0.75}
+      TYPESAFE_INPUT_USD_PER_MILLION: ${TYPESAFE_INPUT_USD_PER_MILLION}
+      TYPESAFE_OUTPUT_USD_PER_MILLION: ${TYPESAFE_OUTPUT_USD_PER_MILLION}
+      PDF_IMPORT_MAX_PAGES: ${PDF_IMPORT_MAX_PAGES:-20}
+      PDF_IMPORT_RENDER_SCALE: ${PDF_IMPORT_RENDER_SCALE:-2}
+      PDF_IMPORT_MAX_FILE_MB: ${PDF_IMPORT_MAX_FILE_MB:-10}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rustfs-bucket:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  rustfs:
+    image: rustfs/rustfs:latest
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:?Set S3_ACCESS_KEY_ID in .env}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:?Set S3_SECRET_ACCESS_KEY in .env}
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: :9000
+      RUSTFS_CONSOLE_ENABLE: "false"
+    volumes:
+      - rustfs-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:9000/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  rustfs-bucket:
+    image: rustfs/rc:latest
+    depends_on:
+      rustfs:
+        condition: service_healthy
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:?Set S3_ACCESS_KEY_ID in .env}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:?Set S3_SECRET_ACCESS_KEY in .env}
+      S3_BUCKET: ${S3_BUCKET:-tamidoc}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        /usr/bin/rc alias set rustfs http://rustfs:9000 "$${RUSTFS_ACCESS_KEY}" "$${RUSTFS_SECRET_KEY}" >/dev/null
+        /usr/bin/rc mb --ignore-existing "rustfs/$${S3_BUCKET}"
+
+volumes:
+  mongo-data:
+  rustfs-data:
